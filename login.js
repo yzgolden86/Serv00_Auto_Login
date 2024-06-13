@@ -1,20 +1,30 @@
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 
+function formatToISO(date) {
+  return date.toISOString().replace('T', ' ').replace('Z', '').replace(/\.\d{3}Z/, '');
+}
+
+async function delayTime(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 (async () => {
   // 读取 accounts.json 中的 JSON 字符串
   const accountsJson = fs.readFileSync('accounts.json', 'utf-8');
   const accounts = JSON.parse(accountsJson);
 
   for (const account of accounts) {
-    const { username, password } = account;
+    const { username, password, panelnum } = account;
 
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
 
+    let url = `https://panel${panelnum}.serv00.com/login/?next=/`;
+
     try {
       // 修改网址为新的登录页面
-      await page.goto('https://panel3.serv00.com/login/?next=/');
+      await page.goto(url);
 
       // 清空用户名输入框的原有值
       const usernameInput = await page.$('#id_username');
@@ -45,7 +55,10 @@ const puppeteer = require('puppeteer');
       });
 
       if (isLoggedIn) {
-        console.log(`账号 ${username} 登录成功！`);
+        // 获取当前的UTC时间和北京时间
+        const nowUtc = formatToISO(new Date());// UTC时间
+        const nowBeijing = formatToISO(new Date(new Date().getTime() + 8 * 60 * 60 * 1000)); // 北京时间东8区，用算术来搞
+        console.log(`账号 ${username} 于北京时间 ${nowBeijing}（UTC时间 ${nowUtc}）登录成功！`);
       } else {
         console.error(`账号 ${username} 登录失败，请检查账号和密码是否正确。`);
       }
